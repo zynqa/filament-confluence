@@ -68,7 +68,7 @@ class ListConfluencePages extends ListRecords
             Actions\Action::make('confluence_settings')
                 ->label('Confluence Settings')
                 ->icon('heroicon-o-cog-6-tooth')
-                ->url(fn (): string => route('filament.app.pages.manage-confluence-settings'))
+                ->url(fn (): string => route('filament.app.pages.manage-general-settings'))
                 ->visible(fn (): bool => auth()->user()?->hasRole('super_admin') ?? false)
                 ->color('gray'),
         ];

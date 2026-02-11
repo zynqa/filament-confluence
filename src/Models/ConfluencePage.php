@@ -117,11 +117,23 @@ class ConfluencePage extends Model
     }
 
     /**
-     * Enable caching for Sushi model
+     * Disable Sushi caching to prevent cross-user cache pollution
+     *
+     * ISSUE: Sushi uses a single SQLite file for ALL users, which causes users
+     * to see cached pages from other users with different Confluence space access.
+     * The sushiCacheReferenceName() method doesn't create separate storage - it only
+     * replaces the entire cache, which doesn't always work correctly.
+     *
+     * SOLUTION: Disable caching to always fetch fresh data from the API.
+     * The ConfluenceService already implements proper per-user Laravel caching,
+     * so this doesn't significantly impact performance.
+     *
+     * For better performance in the future, consider implementing database-backed
+     * storage instead of Sushi, or use Laravel Cache with proper per-user keys.
      */
     protected function sushiShouldCache(): bool
     {
-        return true;
+        return false; // Disable caching to prevent cross-user data leakage
     }
 
     /**

@@ -12,6 +12,13 @@ use Zynqa\FilamentConfluence\Settings\ConfluenceSettings;
 
 class ManageConfluenceSettings extends SettingsPage
 {
+    /**
+     * This page is not shown in navigation.
+     * Instead, use ConfluenceSettingsForm::getSchema() to embed
+     * Confluence settings as a tab in your app's settings page.
+     */
+    protected static bool $shouldRegisterNavigation = false;
+
     protected static ?string $navigationIcon = 'heroicon-o-cog-6-tooth';
 
     protected static ?string $navigationLabel = 'Confluence';
