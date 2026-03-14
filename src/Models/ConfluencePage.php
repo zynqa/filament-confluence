@@ -7,6 +7,7 @@ namespace Zynqa\FilamentConfluence\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 use Sushi\Sushi;
+use Zynqa\FilamentConfluence\Services\ConfluenceContentTransformer;
 use Zynqa\FilamentConfluence\Services\ConfluenceService;
 
 class ConfluencePage extends Model
@@ -102,7 +103,7 @@ class ConfluencePage extends Model
             ?? $page['content']
             ?? '';
 
-        return $content;
+        return app(ConfluenceContentTransformer::class)->transform($content);
     }
 
     /**

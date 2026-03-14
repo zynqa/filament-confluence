@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Zynqa\FilamentConfluence\Services;
 
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Log;
 
 class ConfluenceService
@@ -129,6 +130,11 @@ class ConfluenceService
     public function searchPages(string $cql): array
     {
         return $this->client->searchPages($cql);
+    }
+
+    public function fetchImage(string $url): ?Response
+    {
+        return $this->client->fetchImage($url);
     }
 
     public function clearPageCache(string $pageId): void

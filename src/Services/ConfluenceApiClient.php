@@ -284,6 +284,22 @@ class ConfluenceApiClient
         }
     }
 
+    public function fetchImage(string $url): ?\Illuminate\Http\Client\Response
+    {
+        try {
+            return Http::withHeaders(['Authorization' => $this->auth])
+                ->timeout(30)
+                ->get($url);
+        } catch (\Exception $e) {
+            Log::error('Exception fetching Confluence image', [
+                'url' => $url,
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+
     public function clearCache(string $pageId): void
     {
         Cache::forget("confluence_page_{$pageId}_markdown");

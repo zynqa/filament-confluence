@@ -11,6 +11,7 @@ use Filament\Resources\Pages\ViewRecord;
 use Illuminate\Support\Facades\Cache;
 use Zynqa\FilamentConfluence\Filament\Resources\ConfluencePageResource;
 use Zynqa\FilamentConfluence\Models\ConfluencePage;
+use Zynqa\FilamentConfluence\Services\ConfluenceContentTransformer;
 use Zynqa\FilamentConfluence\Services\ConfluenceService;
 
 class ViewConfluencePage extends ViewRecord
@@ -68,9 +69,11 @@ class ViewConfluencePage extends ViewRecord
                             ->hiddenLabel()
                             ->columnSpanFull()
                             ->state(function () {
-                                return $this->fullPageData['body']['view']['value']
+                                $content = $this->fullPageData['body']['view']['value']
                                     ?? $this->fullPageData['body']['storage']['value']
                                     ?? '<p>No content available</p>';
+
+                                return app(ConfluenceContentTransformer::class)->transform($content);
                             }),
                     ])
                     ->collapsed(false),

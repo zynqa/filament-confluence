@@ -40,6 +40,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Image Proxy
+    |--------------------------------------------------------------------------
+    | Protected Confluence image URLs are rewritten to this app route so the
+    | browser never requests Confluence assets directly.
+    */
+    'image_proxy' => [
+        'middleware' => ['web', 'auth'],
+        'cache_control' => env('CONFLUENCE_IMAGE_CACHE_CONTROL', 'private, max-age=300'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Cache Configuration
     |--------------------------------------------------------------------------
     */

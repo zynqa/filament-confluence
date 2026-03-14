@@ -6,6 +6,7 @@ namespace Zynqa\FilamentConfluence;
 
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
+use Zynqa\FilamentConfluence\Services\ConfluenceContentTransformer;
 use Zynqa\FilamentConfluence\Services\ConfluenceService;
 
 class FilamentConfluenceServiceProvider extends PackageServiceProvider
@@ -21,9 +22,15 @@ class FilamentConfluenceServiceProvider extends PackageServiceProvider
 
     public function packageBooted(): void
     {
+        $this->loadRoutesFrom(__DIR__.'/../routes/web.php');
+
         // Register singleton service
         $this->app->singleton(ConfluenceService::class, function ($app) {
             return new ConfluenceService;
+        });
+
+        $this->app->singleton(ConfluenceContentTransformer::class, function ($app) {
+            return new ConfluenceContentTransformer;
         });
     }
 }

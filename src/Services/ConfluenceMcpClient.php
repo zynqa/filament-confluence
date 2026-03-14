@@ -174,6 +174,15 @@ class ConfluenceMcpClient
         }
     }
 
+    public function fetchImage(string $url): ?\Illuminate\Http\Client\Response
+    {
+        Log::warning('Confluence image proxy is unavailable when using MCP connection', [
+            'url' => $url,
+        ]);
+
+        return null;
+    }
+
     public function clearCache(string $pageId): void
     {
         Cache::forget("confluence_page_{$pageId}_markdown");
