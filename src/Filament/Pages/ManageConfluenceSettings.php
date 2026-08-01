@@ -6,6 +6,7 @@ namespace Zynqa\FilamentConfluence\Filament\Pages;
 
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Notifications\Notification;
 use Filament\Pages\SettingsPage;
 use Illuminate\Support\Facades\Cache;
 use Zynqa\FilamentConfluence\Settings\ConfluenceSettings;
@@ -96,7 +97,7 @@ class ManageConfluenceSettings extends SettingsPage
                                         Cache::forget('sushi:confluence_pages_user_'.$user->id);
                                     }
 
-                                    \Filament\Notifications\Notification::make()
+                                    Notification::make()
                                         ->title('Caches cleared successfully')
                                         ->success()
                                         ->send();
@@ -112,7 +113,7 @@ class ManageConfluenceSettings extends SettingsPage
         // Clear caches after saving settings
         Cache::forget('confluence_spaces');
 
-        \Filament\Notifications\Notification::make()
+        Notification::make()
             ->title('Settings saved successfully')
             ->body('Confluence caches have been cleared. Users will see updated configuration on next page load.')
             ->success()

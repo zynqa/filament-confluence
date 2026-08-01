@@ -9,6 +9,7 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Support\Facades\Cache;
 use Zynqa\FilamentConfluence\Filament\Resources\ConfluencePageResource;
+use Zynqa\FilamentConfluence\Services\ConfluenceApiClient;
 
 class ListConfluencePages extends ListRecords
 {
@@ -53,7 +54,7 @@ class ListConfluencePages extends ListRecords
 
                     // Clear space ID and page caches for user's assigned spaces
                     if ($user && method_exists($user, 'getConfluenceSpaceKeys')) {
-                        $service = app(\Zynqa\FilamentConfluence\Services\ConfluenceApiClient::class);
+                        $service = app(ConfluenceApiClient::class);
                         foreach ($user->getConfluenceSpaceKeys() as $spaceKey) {
                             $service->clearSpaceCache($spaceKey);
                         }

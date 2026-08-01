@@ -7,6 +7,7 @@ namespace Zynqa\FilamentConfluence\Filament\Resources\ConfluencePageResource\Pag
 use Filament\Actions;
 use Filament\Infolists;
 use Filament\Infolists\Infolist;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
 use Illuminate\Support\Facades\Cache;
 use Zynqa\FilamentConfluence\Filament\Resources\ConfluencePageResource;
@@ -43,7 +44,7 @@ class ViewConfluencePage extends ViewRecord
                     // Reload page data
                     $this->fullPageData = $service->getPage((string) $this->record->page_id);
 
-                    \Filament\Notifications\Notification::make()
+                    Notification::make()
                         ->success()
                         ->title('Page refreshed from Confluence')
                         ->send();

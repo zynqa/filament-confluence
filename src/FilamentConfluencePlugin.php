@@ -7,6 +7,7 @@ namespace Zynqa\FilamentConfluence;
 use Filament\Contracts\Plugin;
 use Filament\Panel;
 use Filament\Support\Concerns\EvaluatesClosures;
+use Illuminate\Support\Facades\Gate;
 use Zynqa\FilamentConfluence\Filament\Pages\ManageConfluenceSettings;
 use Zynqa\FilamentConfluence\Filament\Resources\ConfluencePageResource;
 use Zynqa\FilamentConfluence\Models\ConfluencePage;
@@ -36,7 +37,7 @@ class FilamentConfluencePlugin implements Plugin
     public function boot(Panel $panel): void
     {
         // Register policy
-        \Illuminate\Support\Facades\Gate::policy(
+        Gate::policy(
             ConfluencePage::class,
             ConfluencePagePolicy::class
         );
