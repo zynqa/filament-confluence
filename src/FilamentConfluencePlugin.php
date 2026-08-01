@@ -27,10 +27,10 @@ class FilamentConfluencePlugin implements Plugin
             ->resources([
                 ConfluencePageResource::class,
             ]);
-            // Note: ManageConfluenceSettings is NOT registered as a standalone page.
-            // Instead, the package provides ConfluenceSettingsForm::getSchema()
-            // which can be embedded as a tab in the app's existing settings page.
-            // This approach keeps the navigation clean and provides better integration.
+        // Note: ManageConfluenceSettings is NOT registered as a standalone page.
+        // Instead, the package provides ConfluenceSettingsForm::getSchema()
+        // which can be embedded as a tab in the app's existing settings page.
+        // This approach keeps the navigation clean and provides better integration.
     }
 
     public function boot(Panel $panel): void
