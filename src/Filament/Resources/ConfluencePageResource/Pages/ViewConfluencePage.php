@@ -10,7 +10,6 @@ use Filament\Infolists\Infolist;
 use Filament\Resources\Pages\ViewRecord;
 use Illuminate\Support\Facades\Cache;
 use Zynqa\FilamentConfluence\Filament\Resources\ConfluencePageResource;
-use Zynqa\FilamentConfluence\Models\ConfluencePage;
 use Zynqa\FilamentConfluence\Services\ConfluenceContentTransformer;
 use Zynqa\FilamentConfluence\Services\ConfluenceService;
 
@@ -20,7 +19,7 @@ class ViewConfluencePage extends ViewRecord
 
     public ?array $fullPageData = null;
 
-    public function mount(int | string $record): void
+    public function mount(int|string $record): void
     {
         parent::mount($record);
 
