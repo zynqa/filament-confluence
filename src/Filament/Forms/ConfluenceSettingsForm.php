@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Zynqa\FilamentConfluence\Filament\Forms;
 
+use Carbon\Carbon;
 use Filament\Forms;
+use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -72,7 +74,7 @@ class ConfluenceSettingsForm
                                 return '❌ No cache file found';
                             }
 
-                            $lastModified = \Carbon\Carbon::createFromTimestamp(filemtime($sushiFile));
+                            $lastModified = Carbon::createFromTimestamp(filemtime($sushiFile));
 
                             return '✅ Cache exists (Last modified: '.$lastModified->diffForHumans().')';
                         })
@@ -143,7 +145,7 @@ class ConfluenceSettingsForm
         // Clear Confluence API caches
         Cache::forget('confluence_spaces');
 
-        \Filament\Notifications\Notification::make()
+        Notification::make()
             ->title('Cache Cleared Successfully')
             ->body('Your Confluence cache has been cleared. Fresh data will be loaded on your next visit.')
             ->success()
@@ -164,7 +166,7 @@ class ConfluenceSettingsForm
             @unlink($sushiFile);
         }
 
-        \Filament\Notifications\Notification::make()
+        Notification::make()
             ->title('All Cache Cleared')
             ->body('All Confluence caches have been cleared system-wide.')
             ->success()
@@ -182,7 +184,7 @@ class ConfluenceSettingsForm
             return 'No Cache';
         }
 
-        $lastModified = \Carbon\Carbon::createFromTimestamp(filemtime($sushiFile));
+        $lastModified = Carbon::createFromTimestamp(filemtime($sushiFile));
 
         if ($lastModified->isToday()) {
             return 'Fresh';
@@ -206,7 +208,7 @@ class ConfluenceSettingsForm
             return 'gray';
         }
 
-        $lastModified = \Carbon\Carbon::createFromTimestamp(filemtime($sushiFile));
+        $lastModified = Carbon::createFromTimestamp(filemtime($sushiFile));
 
         if ($lastModified->isToday()) {
             return 'success'; // Green

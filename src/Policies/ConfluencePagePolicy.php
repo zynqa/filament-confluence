@@ -6,6 +6,7 @@ namespace Zynqa\FilamentConfluence\Policies;
 
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Zynqa\FilamentConfluence\Models\ConfluencePage;
+use Zynqa\FilamentConfluence\Services\ConfluenceService;
 
 class ConfluencePagePolicy
 {
@@ -49,7 +50,7 @@ class ConfluencePagePolicy
 
         // 2. Check if page is a descendant of an excluded page with exclude_descendants=true
         if (method_exists($user, 'getConfluenceExcludedPages')) {
-            $service = app(\Zynqa\FilamentConfluence\Services\ConfluenceService::class);
+            $service = app(ConfluenceService::class);
 
             foreach ($user->getConfluenceExcludedPages() as $exclusion) {
                 if ($exclusion['exclude_descendants']) {
@@ -81,7 +82,7 @@ class ConfluencePagePolicy
 
         // 5. Check if page is a descendant of an assigned page with include_descendants=true
         if (method_exists($user, 'getConfluencePageAssignments')) {
-            $service = app(\Zynqa\FilamentConfluence\Services\ConfluenceService::class);
+            $service = app(ConfluenceService::class);
 
             foreach ($user->getConfluencePageAssignments() as $assignment) {
                 if ($assignment['include_descendants']) {

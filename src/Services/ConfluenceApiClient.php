@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Zynqa\FilamentConfluence\Services;
 
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -284,7 +285,7 @@ class ConfluenceApiClient
         }
     }
 
-    public function fetchImage(string $url): ?\Illuminate\Http\Client\Response
+    public function fetchImage(string $url): ?Response
     {
         try {
             return Http::withHeaders(['Authorization' => $this->auth])
