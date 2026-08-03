@@ -8,6 +8,7 @@ use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class ConfluenceApiClient
 {
@@ -288,9 +289,13 @@ class ConfluenceApiClient
     public function fetchImage(string $url): ?Response
     {
         try {
+            // Confluence rejects API token auth on the legacy /wiki/download path, so images
+            // embedded in page content have to be fetched through the attachment endpoint.
+            $downloadUrl = $this->resolveAttachmentDownloadUrl($url) ?? $url;
+
             return Http::withHeaders(['Authorization' => $this->auth])
                 ->timeout(30)
-                ->get($url);
+                ->get($downloadUrl);
         } catch (\Exception $e) {
             Log::error('Exception fetching Confluence image', [
                 'url' => $url,
@@ -301,11 +306,103 @@ class ConfluenceApiClient
         }
     }
 
+    /**
+     * Translate a legacy /wiki/download/{attachments|thumbnails}/{pageId}/{filename} URL into the
+     * attachment download endpoint, which still accepts API token auth.
+     *
+     * Returns null when the URL is not a legacy download URL or the page has no attachment of that
+     * name, in which case the caller keeps using the original URL.
+     */
+    private function resolveAttachmentDownloadUrl(string $url): ?string
+    {
+        $path = parse_url($url, PHP_URL_PATH);
+
+        if (! is_string($path)) {
+            return null;
+        }
+
+        if (! preg_match('#^/wiki/download/(?:attachments|thumbnails)/([^/]+)/([^/]+)$#', $path, $matches)) {
+            return null;
+        }
+
+        $filename = urldecode($matches[2]);
+        $downloadLink = $this->getPageAttachmentLinks($matches[1])[$filename] ?? null;
+
+        if (! is_string($downloadLink) || $downloadLink === '') {
+            return null;
+        }
+
+        if (Str::startsWith($downloadLink, ['http://', 'https://'])) {
+            return $downloadLink;
+        }
+
+        // The API returns links relative to the wiki root, for example
+        // /rest/api/content/{pageId}/child/attachment/{attachmentId}/download
+        $prefix = Str::startsWith($downloadLink, '/wiki/') ? '' : '/wiki';
+
+        return $this->baseUrl.$prefix.$downloadLink;
+    }
+
+    /**
+     * Download links for a page's attachments, keyed by filename.
+     *
+     * Cached per page so that one lookup serves every image on an article.
+     *
+     * @return array<string, string>
+     */
+    private function getPageAttachmentLinks(string $pageId): array
+    {
+        $cacheKey = "confluence_page_{$pageId}_attachment_links";
+        $cacheTtl = config('filament-confluence.cache.pages', 1800);
+
+        return Cache::remember($cacheKey, $cacheTtl, function () use ($pageId) {
+            $links = [];
+            $cursor = null;
+
+            do {
+                $params = ['limit' => 250];
+
+                if ($cursor) {
+                    $params['cursor'] = $cursor;
+                }
+
+                $response = Http::withHeaders(['Authorization' => $this->auth])
+                    ->timeout(30)
+                    ->get("{$this->baseUrl}/wiki/api/v2/pages/{$pageId}/attachments", $params);
+
+                if (! $response->successful()) {
+                    Log::error('Failed to fetch Confluence page attachments', [
+                        'page_id' => $pageId,
+                        'status' => $response->status(),
+                    ]);
+
+                    break;
+                }
+
+                $data = $response->json();
+
+                foreach ($data['results'] ?? [] as $attachment) {
+                    $title = $attachment['title'] ?? null;
+                    $downloadLink = $attachment['downloadLink'] ?? null;
+
+                    if (is_string($title) && $title !== '' && is_string($downloadLink) && $downloadLink !== '') {
+                        $links[$title] = $downloadLink;
+                    }
+                }
+
+                $cursor = $data['_links']['next'] ?? null;
+            } while ($cursor);
+
+            return $links;
+        });
+    }
+
     public function clearCache(string $pageId): void
     {
         Cache::forget("confluence_page_{$pageId}_markdown");
         Cache::forget("confluence_page_{$pageId}_adf");
         Cache::forget("confluence_page_children_{$pageId}");
+        Cache::forget("confluence_page_{$pageId}_attachment_links");
     }
 
     public function clearSpaceCache(string $spaceKey): void
