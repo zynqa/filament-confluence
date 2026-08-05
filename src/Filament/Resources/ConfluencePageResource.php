@@ -4,13 +4,17 @@ declare(strict_types=1);
 
 namespace Zynqa\FilamentConfluence\Filament\Resources;
 
+use Filament\Actions\ViewAction;
 use Filament\Resources\Resource;
-use Filament\Tables;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Zynqa\FilamentConfluence\Filament\Resources\ConfluencePageResource\Pages;
+use Zynqa\FilamentConfluence\Filament\Resources\ConfluencePageResource\Pages\ListConfluencePages;
+use Zynqa\FilamentConfluence\Filament\Resources\ConfluencePageResource\Pages\ViewConfluencePage;
 use Zynqa\FilamentConfluence\Models\ConfluencePage;
 
 class ConfluencePageResource extends Resource
@@ -19,7 +23,7 @@ class ConfluencePageResource extends Resource
 
     protected static ?string $slug = 'knowledge';
 
-    protected static ?string $navigationIcon = 'heroicon-o-document-text';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-document-text';
 
     protected static ?string $navigationLabel = 'Knowledge';
 
@@ -33,12 +37,12 @@ class ConfluencePageResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('title')
+                TextColumn::make('title')
                     ->searchable()
                     ->sortable()
                     ->limit(50)
                     ->description(fn (ConfluencePage $record): string => (string) ($record->space_key ?? ''))
-                    ->tooltip(function (Tables\Columns\TextColumn $column): ?string {
+                    ->tooltip(function (TextColumn $column): ?string {
                         $state = $column->getState();
 
                         if (strlen($state) <= 50) {
@@ -48,34 +52,34 @@ class ConfluencePageResource extends Resource
                         return $state;
                     }),
 
-                Tables\Columns\TextColumn::make('space_key')
+                TextColumn::make('space_key')
                     ->label('Space')
                     ->badge()
                     ->sortable()
                     ->searchable()
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('author_name')
+                TextColumn::make('author_name')
                     ->label('Author')
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
 
-                Tables\Columns\TextColumn::make('updated_at')
+                TextColumn::make('updated_at')
                     ->label('Last Updated')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('space_key')
+                SelectFilter::make('space_key')
                     ->label('Space')
                     ->multiple()
                     ->preload(),
             ])
-            ->actions([
-                Tables\Actions\ViewAction::make(),
+            ->recordActions([
+                ViewAction::make(),
             ])
-            ->bulkActions([
+            ->toolbarActions([
                 // No bulk actions for read-only resource
             ])
             ->defaultSort('title', 'asc')
@@ -85,8 +89,8 @@ class ConfluencePageResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListConfluencePages::route('/'),
-            'view' => Pages\ViewConfluencePage::route('/{record}'),
+            'index' => ListConfluencePages::route('/'),
+            'view' => ViewConfluencePage::route('/{record}'),
         ];
     }
 

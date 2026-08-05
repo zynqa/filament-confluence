@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Zynqa\FilamentConfluence\Filament\Resources\ConfluencePageResource\Pages;
 
-use Filament\Actions;
+use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Support\Facades\Cache;
@@ -18,7 +18,7 @@ class ListConfluencePages extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\Action::make('refresh')
+            Action::make('refresh')
                 ->label('Refresh from Confluence')
                 ->icon('heroicon-o-arrow-path')
                 ->color('gray')
@@ -66,7 +66,7 @@ class ListConfluencePages extends ListRecords
                         ->send();
                 }),
 
-            Actions\Action::make('confluence_settings')
+            Action::make('confluence_settings')
                 ->label('Confluence Settings')
                 ->icon('heroicon-o-cog-6-tooth')
                 ->url(fn (): string => route('filament.app.pages.manage-general-settings'))

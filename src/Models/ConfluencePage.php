@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Zynqa\FilamentConfluence\Models;
 
+use Exception;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 use Sushi\Sushi;
@@ -48,7 +49,7 @@ class ConfluencePage extends Model
                 ->map(fn ($page) => $this->formatPageRow($page))
                 ->values()
                 ->all();
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Error fetching Confluence pages for Sushi model', [
                 'user_id' => $user->id ?? null,
                 'error' => $e->getMessage(),

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Zynqa\FilamentConfluence\Models\Concerns;
 
+use Exception;
 use Illuminate\Support\Facades\Log;
 
 trait HasConfluenceSpaces
@@ -34,7 +35,7 @@ trait HasConfluenceSpaces
             ]);
 
             return [];
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Error processing Confluence space keys', [
                 'user_id' => $this->id ?? null,
                 'error' => $e->getMessage(),
@@ -82,7 +83,7 @@ trait HasConfluenceSpaces
             ]);
 
             return [];
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Error processing Confluence page assignments', [
                 'user_id' => $this->id ?? null,
                 'error' => $e->getMessage(),
@@ -130,7 +131,7 @@ trait HasConfluenceSpaces
             ]);
 
             return [];
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Error processing Confluence excluded pages', [
                 'user_id' => $this->id ?? null,
                 'error' => $e->getMessage(),

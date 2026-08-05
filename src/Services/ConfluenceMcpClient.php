@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Zynqa\FilamentConfluence\Services;
 
+use Exception;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -37,7 +38,7 @@ class ConfluenceMcpClient
                 ]);
 
                 return $result;
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 Log::error('Exception fetching Confluence page via MCP', [
                     'page_id' => $pageId,
                     'error' => $e->getMessage(),
@@ -79,7 +80,7 @@ class ConfluenceMcpClient
                 ]);
 
                 return $result['results'] ?? [];
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 Log::error('Exception fetching space pages via MCP', [
                     'space_key' => $spaceKey,
                     'error' => $e->getMessage(),
@@ -109,7 +110,7 @@ class ConfluenceMcpClient
                 ]);
 
                 return $result['results'] ?? [];
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 Log::error('Exception fetching page children via MCP', [
                     'page_id' => $pageId,
                     'error' => $e->getMessage(),
@@ -139,7 +140,7 @@ class ConfluenceMcpClient
                 ]);
 
                 return $result['results'] ?? [];
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 Log::error('Exception fetching Confluence spaces via MCP', [
                     'error' => $e->getMessage(),
                 ]);
@@ -165,7 +166,7 @@ class ConfluenceMcpClient
             ]);
 
             return $result['results'] ?? [];
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Exception searching Confluence pages via MCP', [
                 'cql' => $cql,
                 'error' => $e->getMessage(),

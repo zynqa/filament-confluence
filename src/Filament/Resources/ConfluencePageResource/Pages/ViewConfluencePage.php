@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace Zynqa\FilamentConfluence\Filament\Resources\ConfluencePageResource\Pages;
 
-use Filament\Actions;
-use Filament\Infolists;
-use Filament\Infolists\Infolist;
+use Filament\Actions\Action;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Cache;
 use Zynqa\FilamentConfluence\Filament\Resources\ConfluencePageResource;
 use Zynqa\FilamentConfluence\Services\ConfluenceContentTransformer;
@@ -32,7 +33,7 @@ class ViewConfluencePage extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
-            Actions\Action::make('refresh')
+            Action::make('refresh')
                 ->label('Refresh')
                 ->icon('heroicon-o-arrow-path')
                 ->color('gray')
@@ -57,13 +58,13 @@ class ViewConfluencePage extends ViewRecord
         return $this->record->title;
     }
 
-    public function infolist(Infolist $infolist): Infolist
+    public function infolist(Schema $schema): Schema
     {
         return $infolist
             ->schema([
-                Infolists\Components\Section::make('Content')
+                Section::make('Content')
                     ->schema([
-                        Infolists\Components\TextEntry::make('content')
+                        TextEntry::make('content')
                             ->html()
                             ->prose()
                             ->hiddenLabel()

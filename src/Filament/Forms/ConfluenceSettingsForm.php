@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace Zynqa\FilamentConfluence\Filament\Forms;
 
 use Carbon\Carbon;
-use Filament\Forms;
+use Filament\Actions\Action;
+use Filament\Forms\Components\Placeholder;
 use Filament\Notifications\Notification;
+use Filament\Schemas\Components\Actions;
+use Filament\Schemas\Components\Section;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -25,46 +28,46 @@ class ConfluenceSettingsForm
     public static function getSchema(): array
     {
         return [
-            Forms\Components\Section::make('Page Access Management')
+            Section::make('Page Access Management')
                 ->description('Configure user access to Confluence pages on a per-user basis')
                 ->collapsible()
                 ->schema([
-                    Forms\Components\Placeholder::make('access_info')
+                    Placeholder::make('access_info')
                         ->label('Granular Access Control')
                         ->content('Page access is now managed per-user. Navigate to Users > Edit User > Project & Account tab to configure Confluence space and page assignments.')
                         ->helperText('Users can be assigned entire spaces or specific pages with optional sub-page inclusion.')
                         ->columnSpanFull(),
                 ]),
 
-            Forms\Components\Section::make('Connection Information')
+            Section::make('Connection Information')
                 ->description('Current Confluence connection details')
                 ->collapsible()
                 ->schema([
-                    Forms\Components\Placeholder::make('connection_type')
+                    Placeholder::make('connection_type')
                         ->label('Connection Type')
                         ->content(fn () => config('filament-confluence.connection') === 'mcp' ? 'MCP' : 'Direct API'),
 
-                    Forms\Components\Placeholder::make('confluence_url')
+                    Placeholder::make('confluence_url')
                         ->label('Confluence URL')
                         ->content(fn () => config('filament-confluence.confluence_url'))
                         ->visible(fn () => config('filament-confluence.connection') === 'direct'),
 
-                    Forms\Components\Placeholder::make('cloud_id')
+                    Placeholder::make('cloud_id')
                         ->label('Cloud ID')
                         ->content(fn () => config('filament-confluence.cloud_id'))
                         ->visible(fn () => config('filament-confluence.connection') === 'mcp'),
 
-                    Forms\Components\Placeholder::make('content_format')
+                    Placeholder::make('content_format')
                         ->label('Content Format')
                         ->content(fn () => config('filament-confluence.content_format')),
                 ])
                 ->columns(2),
 
-            Forms\Components\Section::make('Cache Management')
+            Section::make('Cache Management')
                 ->description('Clear Confluence caches to force fresh data from the API')
                 ->collapsible()
                 ->schema([
-                    Forms\Components\Placeholder::make('cache_info')
+                    Placeholder::make('cache_info')
                         ->label('Cache Status')
                         ->content(function () {
                             $sushiFile = storage_path('framework/cache/sushi-zynqa-filament-confluence-models-confluence-page.sqlite');
@@ -80,8 +83,8 @@ class ConfluenceSettingsForm
                         })
                         ->columnSpanFull(),
 
-                    Forms\Components\Actions::make([
-                        Forms\Components\Actions\Action::make('clear_my_cache')
+                    Actions::make([
+                        Action::make('clear_my_cache')
                             ->label('Clear My Cache')
                             ->icon('heroicon-o-trash')
                             ->color('warning')
@@ -92,7 +95,7 @@ class ConfluenceSettingsForm
                                 static::clearUserCache();
                             }),
 
-                        Forms\Components\Actions\Action::make('clear_all_cache')
+                        Action::make('clear_all_cache')
                             ->label('Clear All Users Cache')
                             ->icon('heroicon-o-trash')
                             ->color('danger')

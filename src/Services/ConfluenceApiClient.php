@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Zynqa\FilamentConfluence\Services;
 
+use Exception;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -60,7 +61,7 @@ class ConfluenceApiClient
                 }
 
                 return $response->json();
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 Log::error('Exception fetching Confluence page', [
                     'page_id' => $pageId,
                     'error' => $e->getMessage(),
@@ -94,7 +95,7 @@ class ConfluenceApiClient
                 }
 
                 return $space['id'] ?? null;
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 Log::error('Exception getting space ID from key', [
                     'space_key' => $spaceKey,
                     'error' => $e->getMessage(),
@@ -162,7 +163,7 @@ class ConfluenceApiClient
                 } while ($cursor);
 
                 return $allPages;
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 Log::error('Exception fetching space pages', [
                     'space_key' => $spaceKey,
                     'error' => $e->getMessage(),
@@ -209,7 +210,7 @@ class ConfluenceApiClient
                 }
 
                 return $descendants;
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 Log::error('Exception fetching page children', [
                     'page_id' => $pageId,
                     'error' => $e->getMessage(),
@@ -244,7 +245,7 @@ class ConfluenceApiClient
                 $data = $response->json();
 
                 return $data['results'] ?? [];
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 Log::error('Exception fetching Confluence spaces', [
                     'error' => $e->getMessage(),
                 ]);
@@ -276,7 +277,7 @@ class ConfluenceApiClient
             $data = $response->json();
 
             return $data['results'] ?? [];
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Exception searching Confluence pages', [
                 'cql' => $cql,
                 'error' => $e->getMessage(),
@@ -296,7 +297,7 @@ class ConfluenceApiClient
             return Http::withHeaders(['Authorization' => $this->auth])
                 ->timeout(30)
                 ->get($downloadUrl);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Exception fetching Confluence image', [
                 'url' => $url,
                 'error' => $e->getMessage(),

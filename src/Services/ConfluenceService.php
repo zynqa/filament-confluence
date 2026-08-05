@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Zynqa\FilamentConfluence\Services;
 
+use Exception;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Log;
 
@@ -101,7 +102,7 @@ class ConfluenceService
             }
 
             return $pages->values()->all();
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Error getting pages for user', [
                 'user_id' => $user->id ?? null,
                 'error' => $e->getMessage(),
