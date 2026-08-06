@@ -60,8 +60,8 @@ class ViewConfluencePage extends ViewRecord
 
     public function infolist(Schema $schema): Schema
     {
-        return $infolist
-            ->schema([
+        return $schema
+            ->components([
                 Section::make('Content')
                     ->schema([
                         TextEntry::make('content')
