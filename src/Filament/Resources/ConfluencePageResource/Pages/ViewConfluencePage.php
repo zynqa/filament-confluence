@@ -61,6 +61,10 @@ class ViewConfluencePage extends ViewRecord
     public function infolist(Schema $schema): Schema
     {
         return $schema
+            // One column, explicitly. Filament 4 changed a view page's default schema to a
+            // two-column grid, which squeezed a whole Confluence page into half the width
+            // with the other half left empty. Documentation is prose: it needs the measure.
+            ->columns(1)
             ->components([
                 Section::make('Content')
                     ->schema([
