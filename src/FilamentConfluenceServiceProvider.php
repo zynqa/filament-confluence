@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Zynqa\FilamentConfluence;
 
+use Filament\Support\Assets\Css;
+use Filament\Support\Facades\FilamentAsset;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Zynqa\FilamentConfluence\Services\ConfluenceContentTransformer;
@@ -32,5 +34,10 @@ class FilamentConfluenceServiceProvider extends PackageServiceProvider
         $this->app->singleton(ConfluenceContentTransformer::class, function ($app) {
             return new ConfluenceContentTransformer;
         });
+
+        // Styles the Info, Note, Warning and Success callouts in Confluence page content.
+        FilamentAsset::register([
+            Css::make('filament-confluence', __DIR__.'/../resources/dist/filament-confluence.css'),
+        ], package: 'zynqa/filament-confluence');
     }
 }

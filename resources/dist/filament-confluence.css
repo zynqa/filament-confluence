@@ -1,0 +1,117 @@
+/*
+ * Confluence callouts (the Info, Note, Warning and Success macros).
+ *
+ * Confluence's view HTML marks them up as
+ *   div.confluence-information-macro.confluence-information-macro-<type>
+ *     span.confluence-information-macro-icon   (empty; Confluence fills it from its own icon font)
+ *     div.confluence-information-macro-body
+ * where <type> is information, note, warning or tip. The markup survives Filament's HTML
+ * sanitizer, so styling it here is all that is needed. The icon is drawn as a mask over
+ * the empty span rather than relying on Confluence's font, which is never loaded.
+ *
+ * Each type only sets custom properties; the shared rules below consume them.
+ */
+
+.confluence-information-macro {
+    --confluence-callout-background: #f9fafb;
+    --confluence-callout-border: #9ca3af;
+    --confluence-callout-icon-color: #6b7280;
+    --confluence-callout-icon: none;
+
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    margin: 1.25em 0;
+    padding: 0.875rem 1rem;
+    border-left: 4px solid var(--confluence-callout-border);
+    border-radius: 0.5rem;
+    background-color: var(--confluence-callout-background);
+}
+
+.confluence-information-macro-icon {
+    flex: none;
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-top: 0.125rem;
+    font-size: 0;
+    background-color: var(--confluence-callout-icon-color);
+    -webkit-mask: var(--confluence-callout-icon) center / contain no-repeat;
+    mask: var(--confluence-callout-icon) center / contain no-repeat;
+}
+
+.confluence-information-macro-body {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.confluence-information-macro-body > :first-child {
+    margin-top: 0;
+}
+
+.confluence-information-macro-body > :last-child {
+    margin-bottom: 0;
+}
+
+/* Info */
+.confluence-information-macro-information {
+    --confluence-callout-background: #eff6ff;
+    --confluence-callout-border: #3b82f6;
+    --confluence-callout-icon-color: #2563eb;
+    --confluence-callout-icon: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path fill-rule='evenodd' d='M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-7-4a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM9 9a.75.75 0 0 0 0 1.5h.253a.25.25 0 0 1 .244.304l-.459 2.066A1.75 1.75 0 0 0 10.747 15H11a.75.75 0 0 0 0-1.5h-.253a.25.25 0 0 1-.244-.304l.459-2.066A1.75 1.75 0 0 0 9.253 9H9Z'/></svg>");
+}
+
+/* Note */
+.confluence-information-macro-note {
+    --confluence-callout-background: #fffbeb;
+    --confluence-callout-border: #f59e0b;
+    --confluence-callout-icon-color: #d97706;
+    --confluence-callout-icon: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path fill-rule='evenodd' d='M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495ZM10 5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 5Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z'/></svg>");
+}
+
+/* Warning */
+.confluence-information-macro-warning {
+    --confluence-callout-background: #fef2f2;
+    --confluence-callout-border: #ef4444;
+    --confluence-callout-icon-color: #dc2626;
+    --confluence-callout-icon: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path fill-rule='evenodd' d='M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM8.28 7.22a.75.75 0 0 0-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 1 0 1.06 1.06L10 11.06l1.72 1.72a.75.75 0 1 0 1.06-1.06L11.06 10l1.72-1.72a.75.75 0 0 0-1.06-1.06L10 8.94 8.28 7.22Z'/></svg>");
+}
+
+/* Success (Confluence calls it "tip" in the markup) */
+.confluence-information-macro-tip {
+    --confluence-callout-background: #f0fdf4;
+    --confluence-callout-border: #22c55e;
+    --confluence-callout-icon-color: #16a34a;
+    --confluence-callout-icon: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path fill-rule='evenodd' d='M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z'/></svg>");
+}
+
+/* Filament marks dark mode with a .dark class on <html>. */
+.dark .confluence-information-macro {
+    --confluence-callout-background: rgb(156 163 175 / 0.1);
+    --confluence-callout-border: #9ca3af;
+    --confluence-callout-icon-color: #9ca3af;
+}
+
+.dark .confluence-information-macro-information {
+    --confluence-callout-background: rgb(59 130 246 / 0.12);
+    --confluence-callout-border: #60a5fa;
+    --confluence-callout-icon-color: #60a5fa;
+}
+
+.dark .confluence-information-macro-note {
+    --confluence-callout-background: rgb(245 158 11 / 0.12);
+    --confluence-callout-border: #fbbf24;
+    --confluence-callout-icon-color: #fbbf24;
+}
+
+.dark .confluence-information-macro-warning {
+    --confluence-callout-background: rgb(239 68 68 / 0.12);
+    --confluence-callout-border: #f87171;
+    --confluence-callout-icon-color: #f87171;
+}
+
+.dark .confluence-information-macro-tip {
+    --confluence-callout-background: rgb(34 197 94 / 0.12);
+    --confluence-callout-border: #4ade80;
+    --confluence-callout-icon-color: #4ade80;
+}
