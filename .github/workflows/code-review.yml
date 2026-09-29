@@ -9,7 +9,7 @@ jobs:
     uses: zynqa/code-review-engine/.github/workflows/review.yml@main
     with:
       stack: "laravel"               # PHPCS Laravel standard + Pint; no Magento tooling installed
-      php-version: "8.2"             # Matches the package's own composer requirement
+      php-version: "8.3"             # Pint 1.32, which the engine installs, refuses to run on 8.2; the portal and production run 8.3
       strict-mode: false
       jira-project-key: "ZCP"        # This package is tracked on the portal's board
 
