@@ -28,20 +28,34 @@
     background-color: var(--confluence-callout-background);
 }
 
+/*
+ * The icon box is exactly one line of the callout's text tall (1lh, with 1.5em for browsers
+ * without the unit), and the glyph is centred in it. Its middle is then the middle of the
+ * body's first line whatever font size and line height the surrounding prose uses. The
+ * box keeps the inherited font so that 1lh measures the same line as the body; the single
+ * space Confluence puts inside it is hidden by the mask and a transparent colour.
+ */
 .confluence-information-macro-icon {
     flex: none;
     width: 1.25rem;
-    height: 1.25rem;
-    margin-top: 0.125rem;
-    font-size: 0;
+    height: 1.5em;
+    height: 1lh;
+    overflow: hidden;
+    color: transparent;
     background-color: var(--confluence-callout-icon-color);
-    -webkit-mask: var(--confluence-callout-icon) center / contain no-repeat;
-    mask: var(--confluence-callout-icon) center / contain no-repeat;
+    -webkit-mask: var(--confluence-callout-icon) center / 1.25rem 1.25rem no-repeat;
+    mask: var(--confluence-callout-icon) center / 1.25rem 1.25rem no-repeat;
 }
 
-.confluence-information-macro-body {
+/*
+ * Prose spaces every element from its previous sibling, and the body's previous sibling is
+ * the icon, so it would start a whole paragraph gap below it. The child combinator lifts
+ * this above the prose rule's specificity, so it wins whichever stylesheet loads last.
+ */
+.confluence-information-macro > .confluence-information-macro-body {
     flex: 1 1 auto;
     min-width: 0;
+    margin: 0;
     overflow-wrap: anywhere;
 }
 

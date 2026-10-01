@@ -8,7 +8,6 @@ use Filament\Actions\Action;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
-use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Cache;
 use Zynqa\FilamentConfluence\Filament\Resources\ConfluencePageResource;
@@ -66,22 +65,20 @@ class ViewConfluencePage extends ViewRecord
             // with the other half left empty. Documentation is prose: it needs the measure.
             ->columns(1)
             ->components([
-                Section::make('Content')
-                    ->schema([
-                        TextEntry::make('content')
-                            ->html()
-                            ->prose()
-                            ->hiddenLabel()
-                            ->columnSpanFull()
-                            ->state(function () {
-                                $content = $this->fullPageData['body']['view']['value']
-                                    ?? $this->fullPageData['body']['storage']['value']
-                                    ?? '<p>No content available</p>';
+                // The page is the document, so its content sits directly on the page rather
+                // than inside a "Content" section that only repeated what the page is.
+                TextEntry::make('content')
+                    ->html()
+                    ->prose()
+                    ->hiddenLabel()
+                    ->columnSpanFull()
+                    ->state(function () {
+                        $content = $this->fullPageData['body']['view']['value']
+                            ?? $this->fullPageData['body']['storage']['value']
+                            ?? '<p>No content available</p>';
 
-                                return app(ConfluenceContentTransformer::class)->transform($content);
-                            }),
-                    ])
-                    ->collapsed(false),
+                        return app(ConfluenceContentTransformer::class)->transform($content);
+                    }),
             ]);
     }
 }
