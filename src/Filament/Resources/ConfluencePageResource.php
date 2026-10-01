@@ -33,6 +33,14 @@ class ConfluencePageResource extends Resource
 
     protected static ?int $navigationSort = 2;
 
+    /**
+     * The host application sets its date format in app.date_format, as the other Zynqa
+     * packages expect, so dates read the same here as in the rest of the panel.
+     */
+    private const DEFAULT_DATE_FORMAT = 'd/m/Y';
+
+    private const LONG_DATE_TIME_FORMAT = 'l, F j, Y \\a\\t g:i:s A';
+
     public static function table(Table $table): Table
     {
         return $table
@@ -41,7 +49,6 @@ class ConfluencePageResource extends Resource
                     ->searchable()
                     ->sortable()
                     ->limit(50)
-                    ->description(fn (ConfluencePage $record): string => (string) ($record->space_key ?? ''))
                     ->tooltip(function (TextColumn $column): ?string {
                         $state = $column->getState();
 
@@ -52,21 +59,10 @@ class ConfluencePageResource extends Resource
                         return $state;
                     }),
 
-                TextColumn::make('space_key')
-                    ->label('Space')
-                    ->badge()
-                    ->sortable()
-                    ->searchable()
-                    ->toggleable(),
-
-                TextColumn::make('author_name')
-                    ->label('Author')
-                    ->searchable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-
                 TextColumn::make('updated_at')
                     ->label('Last Updated')
-                    ->dateTime()
+                    ->date(fn (): string => (string) config('app.date_format', self::DEFAULT_DATE_FORMAT))
+                    ->dateTimeTooltip(self::LONG_DATE_TIME_FORMAT)
                     ->sortable()
                     ->toggleable(),
             ])
@@ -82,7 +78,7 @@ class ConfluencePageResource extends Resource
             ->toolbarActions([
                 // No bulk actions for read-only resource
             ])
-            ->defaultSort('title', 'asc')
+            ->defaultSort('updated_at', 'desc')
             ->poll('30s'); // Auto-refresh every 30 seconds
     }
 
