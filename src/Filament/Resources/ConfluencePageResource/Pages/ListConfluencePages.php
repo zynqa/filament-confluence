@@ -19,7 +19,7 @@ class ListConfluencePages extends ListRecords
     {
         return [
             Action::make('refresh')
-                ->label('Refresh from Confluence')
+                ->label('Refresh')
                 ->icon('heroicon-o-arrow-path')
                 ->color('gray')
                 ->action(function () {
