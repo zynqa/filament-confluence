@@ -24,7 +24,7 @@ return [
         ],
         'actions' => [
             'open_confluence' => 'Open in Confluence',
-            'refresh' => 'Refresh from Confluence',
+            'refresh' => 'Refresh',
             'copy_url' => 'Copy URL',
         ],
         'messages' => [
