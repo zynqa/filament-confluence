@@ -5,22 +5,44 @@ declare(strict_types=1);
 namespace Zynqa\FilamentConfluence\Services;
 
 use Exception;
+use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
+use Zynqa\FilamentConfluence\Support\AttachmentUrl;
 
+/**
+ * Confluence REST API client.
+ *
+ * Every call goes to the API base (filament-confluence.api_url), falling back to the site
+ * (filament-confluence.confluence_url). A scoped service-account token only works on the
+ * API gateway, https://api.atlassian.com/ex/confluence/<cloudId>, so the two can differ.
+ * Links shown to people keep pointing at the site.
+ *
+ * The client uses the v1 REST API (/wiki/rest/api). A token with classic scopes is refused
+ * by the v2 API (/wiki/api/v2) with 401 "scope does not match". Results are reshaped into
+ * the page shape the rest of the package reads: id, title, status, spaceKey, parentId,
+ * createdAt, version.createdAt, body.{view|storage}.value and _links.webui.
+ */
 class ConfluenceApiClient
 {
-    private string $baseUrl;
+    /** Results per request; the v1 API caps expanded content listings well below 250. */
+    private const PAGE_SIZE = 100;
+
+    /** Upper bound on paginated requests, so a misbehaving API cannot loop forever. */
+    private const MAX_REQUESTS = 50;
+
+    private const PAGE_EXPAND = 'space,version,ancestors,history';
+
+    private string $apiUrl;
 
     private string $auth;
 
     public function __construct()
     {
         $config = config('filament-confluence');
-        $this->baseUrl = rtrim($config['confluence_url'], '/');
+        $this->apiUrl = rtrim((string) ($config['api_url'] ?? '') ?: (string) $config['confluence_url'], '/');
 
         // Support both auth methods
         if ($config['auth_type'] === 'bearer') {
@@ -39,65 +61,28 @@ class ConfluenceApiClient
 
         return Cache::remember($cacheKey, $cacheTtl, function () use ($pageId, $format) {
             try {
-                // Use 'view' format which returns HTML that can be displayed
-                $bodyFormat = $format === 'markdown'
-                    ? 'view'
-                    : 'storage';
+                // 'view' is rendered HTML that can be displayed; 'storage' is the raw format.
+                $bodyFormat = $format === 'markdown' ? 'view' : 'storage';
 
-                $response = Http::withHeaders(['Authorization' => $this->auth])
-                    ->timeout(30)
-                    ->get("{$this->baseUrl}/wiki/api/v2/pages/{$pageId}", [
-                        'body-format' => $bodyFormat,
-                    ]);
+                $response = $this->request()->get($this->url('/rest/api/content/'.rawurlencode($pageId)), [
+                    'expand' => self::PAGE_EXPAND.',body.'.$bodyFormat,
+                ]);
 
                 if (! $response->successful()) {
                     Log::error('Failed to fetch Confluence page', [
                         'page_id' => $pageId,
                         'status' => $response->status(),
-                        'body' => $response->body(),
                     ]);
 
                     return null;
                 }
 
-                return $response->json();
+                $content = $response->json();
+
+                return is_array($content) ? $this->normalisePage($content) : null;
             } catch (Exception $e) {
                 Log::error('Exception fetching Confluence page', [
                     'page_id' => $pageId,
-                    'error' => $e->getMessage(),
-                ]);
-
-                return null;
-            }
-        });
-    }
-
-    /**
-     * Get space ID from space key
-     * Required because v2 API uses space IDs instead of space keys
-     */
-    private function getSpaceIdFromKey(string $spaceKey): ?string
-    {
-        $cacheKey = "confluence_space_id_{$spaceKey}";
-        $cacheTtl = config('filament-confluence.cache.spaces', 1800);
-
-        return Cache::remember($cacheKey, $cacheTtl, function () use ($spaceKey) {
-            try {
-                $spaces = $this->getSpaces();
-                $space = collect($spaces)->firstWhere('key', $spaceKey);
-
-                if (! $space) {
-                    Log::warning('Space not found for key', [
-                        'space_key' => $spaceKey,
-                    ]);
-
-                    return null;
-                }
-
-                return $space['id'] ?? null;
-            } catch (Exception $e) {
-                Log::error('Exception getting space ID from key', [
-                    'space_key' => $spaceKey,
                     'error' => $e->getMessage(),
                 ]);
 
@@ -113,56 +98,14 @@ class ConfluenceApiClient
 
         return Cache::remember($cacheKey, $cacheTtl, function () use ($spaceKey, $options) {
             try {
-                // Get space ID from space key - required for v2 API
-                $spaceId = $this->getSpaceIdFromKey($spaceKey);
+                $results = $this->getAll('/rest/api/content', array_merge([
+                    'spaceKey' => $spaceKey,
+                    'type' => 'page',
+                    'status' => 'current',
+                    'expand' => self::PAGE_EXPAND,
+                ], $options), ['space_key' => $spaceKey], 'Failed to fetch pages in space');
 
-                if (! $spaceId) {
-                    Log::error('Cannot fetch pages: space ID not found', [
-                        'space_key' => $spaceKey,
-                    ]);
-
-                    return [];
-                }
-
-                $allPages = [];
-                $cursor = null;
-
-                do {
-                    // Use correct v2 API endpoint with space ID
-                    $params = array_merge([
-                        'status' => 'current',
-                        'limit' => 250, // Max allowed
-                    ], $options);
-
-                    if ($cursor) {
-                        $params['cursor'] = $cursor;
-                    }
-
-                    $response = Http::withHeaders(['Authorization' => $this->auth])
-                        ->timeout(30)
-                        ->get("{$this->baseUrl}/wiki/api/v2/spaces/{$spaceId}/pages", $params);
-
-                    if (! $response->successful()) {
-                        Log::error('Failed to fetch pages in space', [
-                            'space_key' => $spaceKey,
-                            'space_id' => $spaceId,
-                            'status' => $response->status(),
-                            'body' => $response->body(),
-                        ]);
-
-                        break;
-                    }
-
-                    $data = $response->json();
-                    $pages = $data['results'] ?? [];
-
-                    $allPages = array_merge($allPages, $pages);
-
-                    // Check for pagination
-                    $cursor = $data['_links']['next'] ?? null;
-                } while ($cursor);
-
-                return $allPages;
+                return array_map($this->normalisePage(...), $results);
             } catch (Exception $e) {
                 Log::error('Exception fetching space pages', [
                     'space_key' => $spaceKey,
@@ -181,32 +124,18 @@ class ConfluenceApiClient
 
         return Cache::remember($cacheKey, $cacheTtl, function () use ($pageId) {
             try {
-                $response = Http::withHeaders(['Authorization' => $this->auth])
-                    ->timeout(30)
-                    ->get("{$this->baseUrl}/wiki/api/v2/pages/{$pageId}/children", [
-                        'limit' => 250,
-                    ]);
-
-                if (! $response->successful()) {
-                    Log::error('Failed to fetch page children', [
-                        'page_id' => $pageId,
-                        'status' => $response->status(),
-                    ]);
-
-                    return [];
-                }
-
-                $data = $response->json();
-                $children = $data['results'] ?? [];
+                $children = array_map($this->normalisePage(...), $this->getAll(
+                    '/rest/api/content/'.rawurlencode($pageId).'/child/page',
+                    ['expand' => self::PAGE_EXPAND],
+                    ['page_id' => $pageId],
+                    'Failed to fetch page children',
+                ));
 
                 // Recursively get descendants
                 $descendants = [];
                 foreach ($children as $child) {
                     $descendants[] = $child;
-                    $descendants = array_merge(
-                        $descendants,
-                        $this->getPageChildren($child['id'])
-                    );
+                    $descendants = array_merge($descendants, $this->getPageChildren($child['id']));
                 }
 
                 return $descendants;
@@ -228,23 +157,15 @@ class ConfluenceApiClient
 
         return Cache::remember($cacheKey, $cacheTtl, function () {
             try {
-                $response = Http::withHeaders(['Authorization' => $this->auth])
-                    ->timeout(30)
-                    ->get("{$this->baseUrl}/wiki/api/v2/spaces", [
-                        'limit' => 250,
-                    ]);
+                $spaces = $this->getAll('/rest/api/space', [], [], 'Failed to fetch Confluence spaces');
 
-                if (! $response->successful()) {
-                    Log::error('Failed to fetch Confluence spaces', [
-                        'status' => $response->status(),
-                    ]);
-
-                    return [];
-                }
-
-                $data = $response->json();
-
-                return $data['results'] ?? [];
+                return array_map(fn (array $space): array => [
+                    'id' => isset($space['id']) ? (string) $space['id'] : null,
+                    'key' => $space['key'] ?? null,
+                    'name' => $space['name'] ?? ($space['key'] ?? ''),
+                    'type' => $space['type'] ?? null,
+                    'status' => $space['status'] ?? null,
+                ], $spaces);
             } catch (Exception $e) {
                 Log::error('Exception fetching Confluence spaces', [
                     'error' => $e->getMessage(),
@@ -255,31 +176,33 @@ class ConfluenceApiClient
         });
     }
 
+    /**
+     * Run a CQL search for pages. The CQL is sent as given: build it with
+     * ConfluenceService::searchPages(), which limits it to what the user may see.
+     */
     public function searchPages(string $cql): array
     {
         try {
-            $response = Http::withHeaders(['Authorization' => $this->auth])
-                ->timeout(30)
-                ->get("{$this->baseUrl}/wiki/rest/api/search", [
-                    'cql' => $cql,
-                    'limit' => 100,
-                ]);
+            $response = $this->request()->get($this->url('/rest/api/content/search'), [
+                'cql' => $cql,
+                'limit' => self::PAGE_SIZE,
+                'expand' => self::PAGE_EXPAND,
+            ]);
 
             if (! $response->successful()) {
                 Log::error('Failed to search Confluence pages', [
-                    'cql' => $cql,
                     'status' => $response->status(),
                 ]);
 
                 return [];
             }
 
-            $data = $response->json();
-
-            return $data['results'] ?? [];
+            return array_map($this->normalisePage(...), array_values(array_filter(
+                (array) ($response->json('results') ?? []),
+                'is_array',
+            )));
         } catch (Exception $e) {
             Log::error('Exception searching Confluence pages', [
-                'cql' => $cql,
                 'error' => $e->getMessage(),
             ]);
 
@@ -287,16 +210,28 @@ class ConfluenceApiClient
         }
     }
 
+    /**
+     * Fetch an image linked from page content.
+     *
+     * Attachments are downloaded through the API's attachment download endpoint, the only
+     * place the token is accepted. Anything else that is protected is refused. Public static
+     * assets on the site, such as emoticons, are fetched without credentials, so the token is
+     * never sent anywhere but the API base.
+     */
     public function fetchImage(string $url): ?Response
     {
         try {
-            // Confluence rejects API token auth on the legacy /wiki/download path, so images
-            // embedded in page content have to be fetched through the attachment endpoint.
-            $downloadUrl = $this->resolveAttachmentDownloadUrl($url) ?? $url;
+            $attachment = AttachmentUrl::parse($url);
 
-            return Http::withHeaders(['Authorization' => $this->auth])
-                ->timeout(30)
-                ->get($downloadUrl);
+            if ($attachment === null) {
+                return AttachmentUrl::isProtected($url) ? null : Http::timeout(30)->get($url);
+            }
+
+            $downloadUrl = $this->resolveAttachmentDownloadUrl($attachment);
+
+            return $downloadUrl === null
+                ? null
+                : Http::withHeaders(['Authorization' => $this->auth])->timeout(30)->get($downloadUrl);
         } catch (Exception $e) {
             Log::error('Exception fetching Confluence image', [
                 'url' => $url,
@@ -308,94 +243,148 @@ class ConfluenceApiClient
     }
 
     /**
-     * Translate a legacy /wiki/download/{attachments|thumbnails}/{pageId}/{filename} URL into the
-     * attachment download endpoint, which still accepts API token auth.
+     * The API download URL for an attachment, or null when the page has no such attachment.
      *
-     * Returns null when the URL is not a legacy download URL or the page has no attachment of that
-     * name, in which case the caller keeps using the original URL.
+     * @param  array{page_id: string, filename: ?string, attachment_id: ?string}  $attachment
      */
-    private function resolveAttachmentDownloadUrl(string $url): ?string
+    private function resolveAttachmentDownloadUrl(array $attachment): ?string
     {
-        $path = parse_url($url, PHP_URL_PATH);
+        $attachmentId = $attachment['attachment_id']
+            ?? $this->getPageAttachmentIds($attachment['page_id'])[(string) $attachment['filename']]
+            ?? null;
 
-        if (! is_string($path)) {
+        if (! is_string($attachmentId) || $attachmentId === '') {
             return null;
         }
 
-        if (! preg_match('#^/wiki/download/(?:attachments|thumbnails)/([^/]+)/([^/]+)$#', $path, $matches)) {
-            return null;
-        }
-
-        $filename = urldecode($matches[2]);
-        $downloadLink = $this->getPageAttachmentLinks($matches[1])[$filename] ?? null;
-
-        if (! is_string($downloadLink) || $downloadLink === '') {
-            return null;
-        }
-
-        if (Str::startsWith($downloadLink, ['http://', 'https://'])) {
-            return $downloadLink;
-        }
-
-        // The API returns links relative to the wiki root, for example
-        // /rest/api/content/{pageId}/child/attachment/{attachmentId}/download
-        $prefix = Str::startsWith($downloadLink, '/wiki/') ? '' : '/wiki';
-
-        return $this->baseUrl.$prefix.$downloadLink;
+        return $this->url('/rest/api/content/'.rawurlencode($attachment['page_id'])
+            .'/child/attachment/'.rawurlencode($attachmentId).'/download');
     }
 
     /**
-     * Download links for a page's attachments, keyed by filename.
+     * Attachment IDs for a page's attachments, keyed by filename.
      *
      * Cached per page so that one lookup serves every image on an article.
      *
      * @return array<string, string>
      */
-    private function getPageAttachmentLinks(string $pageId): array
+    private function getPageAttachmentIds(string $pageId): array
     {
-        $cacheKey = "confluence_page_{$pageId}_attachment_links";
+        $cacheKey = "confluence_page_{$pageId}_attachment_ids";
         $cacheTtl = config('filament-confluence.cache.pages', 1800);
 
         return Cache::remember($cacheKey, $cacheTtl, function () use ($pageId) {
-            $links = [];
-            $cursor = null;
+            $ids = [];
 
-            do {
-                $params = ['limit' => 250];
+            $attachments = $this->getAll(
+                '/rest/api/content/'.rawurlencode($pageId).'/child/attachment',
+                [],
+                ['page_id' => $pageId],
+                'Failed to fetch Confluence page attachments',
+            );
 
-                if ($cursor) {
-                    $params['cursor'] = $cursor;
+            foreach ($attachments as $attachment) {
+                $title = $attachment['title'] ?? null;
+                $id = $attachment['id'] ?? null;
+
+                if (is_string($title) && $title !== '' && is_string($id) && $id !== '') {
+                    $ids[$title] = $id;
                 }
+            }
 
-                $response = Http::withHeaders(['Authorization' => $this->auth])
-                    ->timeout(30)
-                    ->get("{$this->baseUrl}/wiki/api/v2/pages/{$pageId}/attachments", $params);
-
-                if (! $response->successful()) {
-                    Log::error('Failed to fetch Confluence page attachments', [
-                        'page_id' => $pageId,
-                        'status' => $response->status(),
-                    ]);
-
-                    break;
-                }
-
-                $data = $response->json();
-
-                foreach ($data['results'] ?? [] as $attachment) {
-                    $title = $attachment['title'] ?? null;
-                    $downloadLink = $attachment['downloadLink'] ?? null;
-
-                    if (is_string($title) && $title !== '' && is_string($downloadLink) && $downloadLink !== '') {
-                        $links[$title] = $downloadLink;
-                    }
-                }
-
-                $cursor = $data['_links']['next'] ?? null;
-            } while ($cursor);
-
-            return $links;
+            return $ids;
         });
+    }
+
+    /**
+     * Every result of a paginated v1 listing.
+     *
+     * @param  array<string, mixed>  $params
+     * @param  array<string, mixed>  $logContext
+     * @return list<array<string, mixed>>
+     */
+    private function getAll(string $path, array $params, array $logContext, string $failureMessage): array
+    {
+        $results = [];
+        $start = 0;
+
+        for ($request = 0; $request < self::MAX_REQUESTS; $request++) {
+            $response = $this->request()->get($this->url($path), array_merge($params, [
+                'start' => $start,
+                'limit' => self::PAGE_SIZE,
+            ]));
+
+            if (! $response->successful()) {
+                Log::error($failureMessage, array_merge($logContext, ['status' => $response->status()]));
+
+                break;
+            }
+
+            $batch = array_values(array_filter((array) ($response->json('results') ?? []), 'is_array'));
+            $results = array_merge($results, $batch);
+
+            if ($batch === [] || $response->json('_links.next') === null) {
+                break;
+            }
+
+            $start += count($batch);
+        }
+
+        return $results;
+    }
+
+    /**
+     * Reshape v1 content into the page shape the package reads.
+     *
+     * @param  array<string, mixed>  $content
+     * @return array<string, mixed>
+     */
+    private function normalisePage(array $content): array
+    {
+        $ancestors = is_array($content['ancestors'] ?? null) ? $content['ancestors'] : [];
+        $parent = $ancestors === [] ? null : end($ancestors);
+
+        $page = [
+            'id' => (string) ($content['id'] ?? ''),
+            'type' => $content['type'] ?? 'page',
+            'status' => $content['status'] ?? 'current',
+            'title' => $content['title'] ?? null,
+            'spaceKey' => $content['space']['key'] ?? null,
+            'spaceId' => isset($content['space']['id']) ? (string) $content['space']['id'] : null,
+            'parentId' => is_array($parent) && isset($parent['id']) ? (string) $parent['id'] : null,
+            'ancestorIds' => array_values(array_map(
+                fn (array $ancestor): string => (string) $ancestor['id'],
+                array_filter($ancestors, fn ($ancestor): bool => is_array($ancestor) && isset($ancestor['id'])),
+            )),
+            'createdAt' => $content['history']['createdDate'] ?? null,
+            'version' => [
+                'number' => $content['version']['number'] ?? null,
+                'createdAt' => $content['version']['when'] ?? null,
+                'by' => ['displayName' => $content['version']['by']['displayName'] ?? null],
+            ],
+            '_links' => ['webui' => $content['_links']['webui'] ?? null],
+        ];
+
+        foreach (['view', 'storage'] as $format) {
+            if (isset($content['body'][$format]['value'])) {
+                $page['body'][$format] = ['value' => (string) $content['body'][$format]['value']];
+            }
+        }
+
+        return $page;
+    }
+
+    private function request(): PendingRequest
+    {
+        return Http::withHeaders([
+            'Authorization' => $this->auth,
+            'Accept' => 'application/json',
+        ])->timeout(30);
+    }
+
+    private function url(string $path): string
+    {
+        return $this->apiUrl.'/wiki'.$path;
     }
 
     public function clearCache(string $pageId): void
@@ -403,12 +392,11 @@ class ConfluenceApiClient
         Cache::forget("confluence_page_{$pageId}_markdown");
         Cache::forget("confluence_page_{$pageId}_adf");
         Cache::forget("confluence_page_children_{$pageId}");
-        Cache::forget("confluence_page_{$pageId}_attachment_links");
+        Cache::forget("confluence_page_{$pageId}_attachment_ids");
     }
 
     public function clearSpaceCache(string $spaceKey): void
     {
         Cache::forget("confluence_space_pages_{$spaceKey}");
-        Cache::forget("confluence_space_id_{$spaceKey}");
     }
 }
