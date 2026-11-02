@@ -178,7 +178,7 @@ class ConfluenceApiClient
 
     /**
      * Run a CQL search for pages. The CQL is sent as given: build it with
-     * ConfluenceService::searchPages(), which limits it to the allowed spaces.
+     * ConfluenceService::searchPages(), which limits it to what the user may see.
      */
     public function searchPages(string $cql): array
     {
@@ -352,6 +352,10 @@ class ConfluenceApiClient
             'spaceKey' => $content['space']['key'] ?? null,
             'spaceId' => isset($content['space']['id']) ? (string) $content['space']['id'] : null,
             'parentId' => is_array($parent) && isset($parent['id']) ? (string) $parent['id'] : null,
+            'ancestorIds' => array_values(array_map(
+                fn (array $ancestor): string => (string) $ancestor['id'],
+                array_filter($ancestors, fn ($ancestor): bool => is_array($ancestor) && isset($ancestor['id'])),
+            )),
             'createdAt' => $content['history']['createdDate'] ?? null,
             'version' => [
                 'number' => $content['version']['number'] ?? null,

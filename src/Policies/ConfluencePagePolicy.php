@@ -32,76 +32,24 @@ class ConfluencePagePolicy
     }
 
     /**
-     * Determine if the user can view a specific Confluence page
-     * Implements additive access with exclusions: (space-based OR page-based OR descendant-based) AND NOT excluded
+     * Determine if the user can view a specific Confluence page.
+     *
+     * Regular users: (assigned space OR assigned page OR descendant of an assigned page) AND
+     * NOT (excluded page OR descendant of an excluded page), as worked out by
+     * ConfluenceService::canUserSeePage(), the same check the image proxy and search use.
+     * Super admins can view every page. The optional allowed_spaces list applies to everyone.
      */
     public function view($user, ConfluencePage $page): bool
     {
-        // Nobody, super admins included, sees a page outside the allowed spaces
         if (! SpaceAllowlist::allows($page->space_key)) {
             return false;
         }
 
-        // Super admins can view every page in the allowed spaces
-        if ($user->hasRole('super_admin')) {
+        if (ConfluenceService::isSuperAdmin($user)) {
             return true;
         }
 
-        // 1. Check if page is explicitly excluded (exclusions take priority)
-        if (method_exists($user, 'isConfluencePageExcluded')
-            && $user->isConfluencePageExcluded($page->page_id)
-        ) {
-            return false;
-        }
-
-        // 2. Check if page is a descendant of an excluded page with exclude_descendants=true
-        if (method_exists($user, 'getConfluenceExcludedPages')) {
-            $service = app(ConfluenceService::class);
-
-            foreach ($user->getConfluenceExcludedPages() as $exclusion) {
-                if ($exclusion['exclude_descendants']) {
-                    // Check if current page is a descendant of excluded page
-                    $descendants = $service->getPageDescendants($exclusion['page_id']);
-                    if (collect($descendants)->contains('id', $page->page_id)) {
-                        return false;
-                    }
-                }
-            }
-        }
-
-        // 3. Check space-based access
-        if (method_exists($user, 'getConfluenceSpaceKeys')) {
-            $userSpaceKeys = $user->getConfluenceSpaceKeys();
-            $pageSpaceKey = $page->space_key;
-
-            if (in_array($pageSpaceKey, $userSpaceKeys)) {
-                return true;
-            }
-        }
-
-        // 4. Check explicit page assignment
-        if (method_exists($user, 'hasConfluencePageAccess')
-            && $user->hasConfluencePageAccess($page->page_id)
-        ) {
-            return true;
-        }
-
-        // 5. Check if page is a descendant of an assigned page with include_descendants=true
-        if (method_exists($user, 'getConfluencePageAssignments')) {
-            $service = app(ConfluenceService::class);
-
-            foreach ($user->getConfluencePageAssignments() as $assignment) {
-                if ($assignment['include_descendants']) {
-                    // This check can be expensive - consider caching
-                    $descendants = $service->getPageDescendants($assignment['page_id']);
-                    if (collect($descendants)->contains('id', $page->page_id)) {
-                        return true;
-                    }
-                }
-            }
-        }
-
-        return false;
+        return app(ConfluenceService::class)->canUserSeePage($user, (string) $page->page_id);
     }
 
     /**

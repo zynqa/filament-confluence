@@ -5,11 +5,15 @@ declare(strict_types=1);
 namespace Zynqa\FilamentConfluence\Support;
 
 /**
- * The Confluence spaces the knowledge base may read.
+ * An optional, global limit on the Confluence spaces the knowledge base may read.
  *
- * The API account can usually see far more of Confluence than the portal should show, so
- * every space, page, search and image is checked against this list before it is used. The
- * list comes from filament-confluence.allowed_spaces. An empty list allows nothing.
+ * The main control is per user: each user only sees the spaces and pages assigned to them,
+ * minus their excluded pages (see ConfluenceService::canUserSeePage()). This list is an extra
+ * safety net on top of that. It comes from filament-confluence.allowed_spaces:
+ *
+ * - unset or empty: every space the API account can see is allowed;
+ * - set: only those spaces are read, for every user, super admins included. A value with no
+ *   valid space key in it allows nothing, so a typo never opens everything.
  */
 final class SpaceAllowlist
 {
@@ -23,6 +27,76 @@ final class SpaceAllowlist
      */
     public static function keys(): array
     {
+        $keys = [];
+
+        foreach (self::configuredEntries() as $key) {
+            if (self::isValidKey($key)) {
+                $keys[] = $key;
+            }
+        }
+
+        return array_values(array_unique($keys));
+    }
+
+    /**
+     * Whether a global allowlist is configured at all.
+     */
+    public static function isRestricted(): bool
+    {
+        return self::configuredEntries() !== [];
+    }
+
+    public static function isValidKey(string $key): bool
+    {
+        return preg_match(self::KEY_PATTERN, $key) === 1;
+    }
+
+    /**
+     * Whether a space may be read. Without an allowlist every space may.
+     */
+    public static function allows(mixed $key): bool
+    {
+        if (! self::isRestricted()) {
+            return true;
+        }
+
+        return is_string($key) && in_array($key, self::keys(), true);
+    }
+
+    /**
+     * Quote a value as a CQL string literal, so it can never end the string or add a clause.
+     */
+    public static function cqlString(string $value): string
+    {
+        return '"'.str_replace(['\\', '"'], ['\\\\', '\\"'], $value).'"';
+    }
+
+    /**
+     * The CQL clause limiting a query to the given space keys, or null when none is valid.
+     *
+     * @param  array<mixed>  $keys
+     */
+    public static function cqlSpaceClause(array $keys): ?string
+    {
+        $valid = array_values(array_unique(array_filter(
+            $keys,
+            fn ($key): bool => is_string($key) && self::isValidKey($key),
+        )));
+
+        if ($valid === []) {
+            return null;
+        }
+
+        return 'space IN ('.implode(', ', array_map(self::cqlString(...), $valid)).')';
+    }
+
+    /**
+     * The configured entries, trimmed, with blanks dropped.
+     *
+     * @return list<string>
+     */
+    private static function configuredEntries(): array
+    {
         $configured = config('filament-confluence.allowed_spaces', []);
 
         if (is_string($configured)) {
@@ -33,48 +107,16 @@ final class SpaceAllowlist
             return [];
         }
 
-        $keys = [];
+        $entries = [];
 
-        foreach ($configured as $key) {
-            $key = is_scalar($key) ? trim((string) $key) : '';
+        foreach ($configured as $entry) {
+            $entry = is_scalar($entry) ? trim((string) $entry) : '';
 
-            if (self::isValidKey($key)) {
-                $keys[] = $key;
+            if ($entry !== '') {
+                $entries[] = $entry;
             }
         }
 
-        return array_values(array_unique($keys));
-    }
-
-    public static function isValidKey(string $key): bool
-    {
-        return preg_match(self::KEY_PATTERN, $key) === 1;
-    }
-
-    public static function allows(mixed $key): bool
-    {
-        return is_string($key) && in_array($key, self::keys(), true);
-    }
-
-    /**
-     * The CQL clause that limits a query to the allowed spaces, or null when none are allowed.
-     */
-    public static function cqlClause(): ?string
-    {
-        $keys = self::keys();
-
-        if ($keys === []) {
-            return null;
-        }
-
-        return 'space IN ('.implode(', ', array_map(self::cqlString(...), $keys)).')';
-    }
-
-    /**
-     * Quote a value as a CQL string literal, so it can never end the string or add a clause.
-     */
-    public static function cqlString(string $value): string
-    {
-        return '"'.str_replace(['\\', '"'], ['\\\\', '\\"'], $value).'"';
+        return $entries;
     }
 }

@@ -31,9 +31,10 @@ return [
     |--------------------------------------------------------------------------
     | Allowed Spaces
     |--------------------------------------------------------------------------
-    | Comma-separated space keys the knowledge base may read, e.g. "DOCS,OPS".
-    | Every space, page, search and image outside them is refused. Empty allows
-    | nothing, so the API account's wider Confluence access never leaks through.
+    | Optional. Comma-separated space keys, e.g. "DOCS,OPS". Each user already
+    | sees only their assigned spaces and pages; this is an extra limit on top,
+    | for everyone including super admins. Empty or unset: every space the API
+    | account can read is allowed.
     */
     'allowed_spaces' => env('CONFLUENCE_ALLOWED_SPACES', ''),
 
