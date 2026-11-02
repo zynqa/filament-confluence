@@ -19,7 +19,8 @@ class ConfluenceImageProxyController extends Controller
 
         abort_unless($decodedSource && $this->isAllowedSource($decodedSource), 404);
 
-        $upstreamResponse = $confluenceService->fetchImage($decodedSource);
+        // Attachments are only served when this user may see the page they belong to
+        $upstreamResponse = $confluenceService->fetchImage($decodedSource, $request->user());
 
         abort_unless($upstreamResponse instanceof HttpResponse && $upstreamResponse->successful(), 404);
 
