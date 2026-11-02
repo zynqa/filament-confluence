@@ -7,6 +7,7 @@ namespace Zynqa\FilamentConfluence\Policies;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Zynqa\FilamentConfluence\Models\ConfluencePage;
 use Zynqa\FilamentConfluence\Services\ConfluenceService;
+use Zynqa\FilamentConfluence\Support\SpaceAllowlist;
 
 class ConfluencePagePolicy
 {
@@ -36,7 +37,12 @@ class ConfluencePagePolicy
      */
     public function view($user, ConfluencePage $page): bool
     {
-        // Super admins can view everything
+        // Nobody, super admins included, sees a page outside the allowed spaces
+        if (! SpaceAllowlist::allows($page->space_key)) {
+            return false;
+        }
+
+        // Super admins can view every page in the allowed spaces
         if ($user->hasRole('super_admin')) {
             return true;
         }

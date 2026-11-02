@@ -18,10 +18,24 @@ return [
     | Confluence API Configuration (for direct connection)
     |--------------------------------------------------------------------------
     */
+    // The site: what links and page images point at.
     'confluence_url' => env('CONFLUENCE_URL', 'https://your-domain.atlassian.net'),
+    // Where REST calls go; defaults to the site. A scoped service-account token only works on
+    // the API gateway, https://api.atlassian.com/ex/confluence/<cloudId>.
+    'api_url' => env('CONFLUENCE_API_URL'),
     'email' => env('CONFLUENCE_EMAIL'),
     'api_token' => env('CONFLUENCE_API_TOKEN'),
     'auth_type' => env('CONFLUENCE_AUTH_TYPE', 'basic'), // basic or bearer
+
+    /*
+    |--------------------------------------------------------------------------
+    | Allowed Spaces
+    |--------------------------------------------------------------------------
+    | Comma-separated space keys the knowledge base may read, e.g. "DOCS,OPS".
+    | Every space, page, search and image outside them is refused. Empty allows
+    | nothing, so the API account's wider Confluence access never leaks through.
+    */
+    'allowed_spaces' => env('CONFLUENCE_ALLOWED_SPACES', ''),
 
     /*
     |--------------------------------------------------------------------------
